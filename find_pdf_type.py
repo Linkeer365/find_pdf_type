@@ -8,6 +8,18 @@ import sys
 
 target_dir=r"D:\AllDowns\newbooks"
 
+def press_alt_f4():
+	
+    # 关闭窗口
+
+    win32api.keybd_event(18,0,0,0)  #alt键位码是18
+    win32api.keybd_event(115,0,0,0)  #f4键位码是115
+    win32api.keybd_event(115,0,win32con.KEYEVENTF_KEYUP,0) #释放按键
+    win32api.keybd_event(18,0,win32con.KEYEVENTF_KEYUP,0)
+
+    time.sleep(2)
+
+
 # def acrobat_extract_text(f_path, f_path_out, f_basename, f_ext):
 #     avDoc = win32com.client.Dispatch("AcroExch.AVDoc") # Connect to Adobe Acrobat
 #
@@ -39,19 +51,25 @@ def get_hd_from_child_hds(father_hd,some_idx,expect_name):
     hds=[hex(each) for each in child_hds]
     print("ChildName List:",names)
     print("Child Hds List:",hds)
+    if some_idx!=None:
+        name=names[some_idx]
+        hd=hds[some_idx]
 
-    name=names[some_idx]
-    hd=hds[some_idx]
+        print("The {} Child.".format(some_idx))
+        print("The Name:{}".format(name))
+        print("The HD:{}".format(hd))
 
-    print("The {} Child.".format(some_idx))
-    print("The Name:{}".format(name))
-    print("The HD:{}".format(hd))
+        # 这里松一点，原先是name==expect_name
 
-    if name==expect_name:
-        return child_hds[some_idx]
+        if expect_name==name:
+            return child_hds[some_idx]
+        else:
+            print("窗口不对！")
+            return None
     else:
-        print("窗口不对！")
-        return None
+        for name,child_hd in zip(names,child_hds):
+            if expect_name in name:
+                return child_hd
 
 def tt():
     # import os
@@ -120,11 +138,24 @@ def check_type(pdf_path,pdf_name,pdf_dir=target_dir):
 
     time.sleep(2)
 
-    adobe_str=f"{pdf_name} - Adobe Acrobat Pro"
-
     root_hd=None
 
+    # 防止“打开文档时发生错误”什么的
+
+    adobe_str="Adobe Acrobat"
     adobe_hd=win32gui.FindWindowEx(root_hd,0,0,adobe_str)
+    if adobe_hd:
+        queding_hd=get_hd_from_child_hds(adobe_hd,5,"")
+        win32gui.SendMessage(queding_hd, win32con.BM_CLICK)
+
+    # adobe_str=f"{pdf_name} - Adobe Acrobat Pro"
+    adobe_str="Adobe Acrobat Pro"
+
+    adobe_hd=get_hd_from_child_hds(root_hd,None,adobe_str)
+
+    if not adobe_hd:
+        press_alt_f4()
+        return 0
 
     avui_CommandWidget_hd=get_hd_from_child_hds(adobe_hd,0,expect_name="AVUICommandWidget")
 
@@ -158,13 +189,13 @@ def check_type(pdf_path,pdf_name,pdf_dir=target_dir):
     #
     # del avDoc
 
-    time.sleep(2)
+    time.sleep(3)
 
     return flag
 
 def main():
     for each in os.listdir(target_dir):
-        if each.endswith(".pdf"):
+        if each.endswith(".pdf") and not each.startswith("typetype"):
             pdf_path=os.path.join(target_dir,each)
             pdf_path2=f"{target_dir}{os.sep}{each}"
             print(f"Path:{pdf_path}")
